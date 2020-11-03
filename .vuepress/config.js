@@ -1,5 +1,5 @@
 module.exports = {
   title: "Redspot",
   dest: "./docs",
-  base: "redspot"
+  base: "/redspot"
 };
