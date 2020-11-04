@@ -85,7 +85,7 @@ Use command `npx redspot compile` to compile the contracts and abi files used fo
 
 Prerequisites:
 
-- rust-src: `rustup component add rust-src`
+- rust-src: `rustup component add rust-src --toolchain nightly`
 - wasm-opt: https://github.com/WebAssembly/binaryen#tools
 - cargo contract v0.7.0: `cargo install --git https://github.com/paritytech/cargo-contract cargo-contract --force`
 - rust nightly: https://rust-lang.github.io/rustup/installation/index.html#installing-nightly
@@ -142,16 +142,16 @@ describe("ERC20", () => {
 
   it("Assigns initial balance", async () => {
     const { contract, sender } = await setup();
-    const result = await contract.query.balanceOf(sender.pair.address);
+    const result = await contract.query.balanceOf(sender.address);
     expect(result?.output?.toString()).to.equal("1000");
   });
 
   it("Transfer adds amount to destination account", async () => {
     const { contract, sender, receiver } = await setup();
 
-    await contract.tx.transfer(receiver.pair.address, 7);
+    await contract.tx.transfer(receiver.address, 7);
 
-    const result = await contract.query.balanceOf(receiver.pair.address);
+    const result = await contract.query.balanceOf(receiver.address);
 
     expect(result.output?.toString()).to.equal("7");
   });
@@ -159,21 +159,21 @@ describe("ERC20", () => {
   it("Transfer emits event", async () => {
     const { contract, sender, receiver } = await setup();
 
-    const result = await contract.tx.transfer(receiver.pair.address, 7);
+    const result = await contract.tx.transfer(receiver.address, 7);
 
     const event = result?.events?.find((e) => e.name === "Transfer");
 
     const [from, to, value] = event?.args as any;
 
-    expect(from.unwrap().toString()).to.equal(sender.pair.address);
-    expect(to.unwrap().toString()).to.equal(receiver.pair.address);
+    expect(from.unwrap().toString()).to.equal(sender.address);
+    expect(to.unwrap().toString()).to.equal(receiver.address);
     expect(value.toNumber()).to.equal(7);
   });
 
   it("Can not transfer above the amount", async () => {
     const { contract, receiver } = await setup();
 
-    const result = await contract.tx.transfer(receiver.pair.address, 1007);
+    const result = await contract.tx.transfer(receiver.address, 1007);
 
     const event = result?.events?.find((e) => e.name === "Transfer");
 
@@ -185,7 +185,7 @@ describe("ERC20", () => {
 
     const emptyAccount = await getRandomSigner(Alice, one.muln(10));
 
-    const result = await contract.tx.transfer(sender.pair.address, 7, {
+    const result = await contract.tx.transfer(sender.address, 7, {
       signer: emptyAccount,
     });
 
@@ -330,5 +330,62 @@ module.exports = {
   mocha: {
     timeout: 60000,
   },
+};
+```
+
+You can get your configuration details via [`env.config`](#config).
+
+### defaultNetwork
+
+You can customize which network is used by default when running Redspot by setting the config's `defaultNetwork` field. If you omit this config, its default value is "localhost".
+
+### networks
+
+The `networks` config field is an optional object where network names map to their configuration.
+
+The default localhost network configuration is:
+
+```javascript
+{
+  localhost: {
+    gasLimit: "400000000000",
+    accounts: ["//Alice", "//Bob", "//Charlie", "//Dave", "//Eve", "//Ferdie"],
+    endpoint: ["ws://127.0.0.1:9944"],
+    types: {},
+    httpHeaders: {},
+    explorerUrl: "https://polkadot.js.org/apps/#/explorer/query/"
+  }
 }
 ```
+
+#### [network].gasLimit
+
+This value is used by default when instantiating a contract and invoking a contract transaction.
+
+If this value is too small, you will get a `contracts.OutOfGas` error. The maximum value of gaslimit is `System.MaximumBlockWeight`(In Sustrate, it is `2000000000000`).
+
+#### [network].accounts
+
+The `accounts` should be an array of [suri](https://polkadot.js.org/docs/keyring/start/suri/) or [KeyringPair](https://polkadot.js.org/docs/keyring/start/create#adding-a-pair).
+
+At run time, you can obtain accounts in the form `keyringPair` by `await env.network.provider.getKeyringpairs()`. For details, see [network.provider](#network.provider)
+
+#### [network].endpoint
+
+The endpoint can specify the address of the node to which you want to connect, either `string` or `string[]`
+
+At this time, only WebSockets versions of RPC are supported.
+
+#### [network].types
+
+the `types` are the concepts defined in polkadotjs. If you have any questions about this, you can see it here [types.extend](https://polkadot.js.org/docs/api/start/types.extend). You can also set [network].typesbundle, [network].typesSpec and so on. In general, if you encounter an error that is similar to 'No such variant in enum MultiSignature', ,maybe you should think about adding or removing types `{ Address: "AccountId", LookupSource: "AccountId"}`, see [impact-on-extrinsics](https://polkadot.js.org/docs/api/start/types.extend#impact-on-extrinsics).
+
+## Runtime Environment
+
+### config
+
+### network
+
+### network.provider
+
+#### provider.getKeyringPairs() ⇒ Promise< Contract >
