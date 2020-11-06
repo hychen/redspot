@@ -85,10 +85,10 @@ Use command `npx redspot compile` to compile the contracts and abi files used fo
 
 Prerequisites:
 
+- rust nightly: https://rust-lang.github.io/rustup/installation/index.html#installing-nightly
 - rust-src: `rustup component add rust-src --toolchain nightly`
 - wasm-opt: https://github.com/WebAssembly/binaryen#tools
-- cargo contract v0.7.0: `cargo install --git https://github.com/paritytech/cargo-contract cargo-contract --force`
-- rust nightly: https://rust-lang.github.io/rustup/installation/index.html#installing-nightly
+- cargo contract v0.7.1: `cargo install --git https://github.com/paritytech/cargo-contract cargo-contract --force`
 
 You can specify the contract name to compile, by default it compiles all contracts in the workspace.
 
@@ -379,6 +379,14 @@ At this time, only WebSockets versions of RPC are supported.
 #### [network].types
 
 the `types` are the concepts defined in polkadotjs. If you have any questions about this, you can see it here [types.extend](https://polkadot.js.org/docs/api/start/types.extend). You can also set [network].typesbundle, [network].typesSpec and so on. In general, if you encounter an error that is similar to 'No such variant in enum MultiSignature', ,maybe you should think about adding or removing types `{ Address: "AccountId", LookupSource: "AccountId"}`, see [impact-on-extrinsics](https://polkadot.js.org/docs/api/start/types.extend#impact-on-extrinsics).
+
+#### [network].httpHeaders
+
+This setting will be added to the webSocket connection headers
+
+#### [network].explorerUrl
+
+This setting is currently used with @redspot/patract. After the transaction is inblock, the console will print the link: `explorerUrl + bloackhash`. The default value is https://polkadot.js.org/apps/#/explorer/query/.
 
 ## Runtime Environment
 
