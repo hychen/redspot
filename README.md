@@ -398,7 +398,7 @@ This option is used when compiling contracts and exporting metadata. By default 
 
 ### mocha
 
-By default, Redspot uses mocha for testing. You can add mocha configuration here. It is recommended to set a high `timeout` value, otherwise you may often encounter timeout errors.
+By default, Redspot uses mocha for testing. You can add mocha configuration here. It is recommended to set a high `timeout` value, otherwise you may often encounter timeout errors. You can find all the configuration items available [here](https://mochajs.org/api/mocha)
 
 ### paths
 
