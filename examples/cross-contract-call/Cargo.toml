@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "contracts/erc20",
+    "contracts/pool"
+]
