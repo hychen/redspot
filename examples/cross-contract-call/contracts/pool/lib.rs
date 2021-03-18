@@ -12,7 +12,8 @@ macro_rules! ensure {
 
 #[ink::contract]
 mod pool {
-    use ink_env::{call::*, DefaultEnvironment};
+    use erc20::Result as Errc20Result;
+    use ink_env::{DefaultEnvironment, call::{*, utils::ReturnType}};
     use ink_prelude::vec::Vec;
     use ink_storage::collections::HashMap as StorageHashMap;
 
@@ -172,7 +173,7 @@ mod pool {
             to: AccountId,
             value: Balance,
         ) -> Result<()> {
-            let result = build_call::<DefaultEnvironment>()
+            let result: Errc20Result<()> = build_call::<DefaultEnvironment>()
                 .callee(token_id)
                 .exec_input(
                     ExecutionInput::new(Selector::new([0xDE, 0xAD, 0xBE, 0xEF]))
@@ -183,8 +184,9 @@ mod pool {
                         // value
                         .push_arg(value),
                 )
-                .returns::<()>()
-                .fire();
+                .returns::<ReturnType<Errc20Result<()>>>()
+                .fire()
+                .unwrap();
 
             if result.is_err() {
                 Err(Error::RemoteCallError)

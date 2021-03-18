@@ -12,6 +12,8 @@ ink_storage = { version = "3.0.0-rc3", default-features = false }
 ink_lang = { version = "3.0.0-rc3", default-features = false }
 ink_prelude = { version = "3.0.0-rc3", default-features = false }
 
+erc20 = { version = "3.0.0-rc3", path = "../erc20", default-features = false, features = ["ink-as-dependency"] }
+
 scale = { package = "parity-scale-codec", version = "2.0.1", default-features = false, features = ["derive"] }
 scale-info = { version = "0.6.0", default-features = false, features = ["derive"], optional = true }
 
@@ -24,6 +26,8 @@ path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
 	"cdylib",
+    # Used for ABI generation.
+    # "rlib"
 ]
 
 [features]
@@ -36,5 +40,7 @@ std = [
     "ink_prelude/std",
     "scale/std",
     "scale-info/std",
+
+    "erc20/std"
 ]
 ink-as-dependency = []

@@ -6,7 +6,7 @@ const { getContractFactory, getRandomSigner } = patract;
 
 const { api, getSigners } = network;
 
-describe('ERC20', () => {
+describe('Pool', () => {
   after(() => {
     return api.disconnect();
   });
@@ -45,39 +45,43 @@ describe('ERC20', () => {
     expect((await Pool.isWhitelisted(TokenB.address)).output).to.eq(false);
   });
 
-  it('Can deposit TokenA', async () => {
-    const { sender, TokenA, TokenB, Pool } = await setup();
+  describe('Can deposit Tokens whitelisted', () => {
+    it('Can deposit TokenA if sender approve', async () => {
+      const { sender, TokenA, Pool } = await setup();
+      await TokenA.approve(Pool.address, 5, { signer: sender });
+      await Pool.deposit(TokenA.address, 5, { signer: sender });
+      console.log(await Pool.getAddressOf(sender));
+      //@FIXE: This does work correctly.
+      //       .to.changeTokenBalances(TokenA, [sender, Pool], [-5, 5]);
+      let tokenAmountOfContract = (await TokenA.balanceOf(Pool.address)).output;
+      expect(tokenAmountOfContract.toNumber()).to.eq(5);
+      let tokenAmountOfSender = (await TokenA.balanceOf(sender.address)).output;
+      expect(tokenAmountOfSender.toNumber()).to.eq(495);
+    });
 
-    await TokenA.approve(Pool.address, 5, { signer: sender });
+    it('transfer emit event', async () => {
+      const { sender, TokenA, Pool } = await setup();
+      await TokenA.approve(Pool.address, 5, { signer: sender });
+      await expect(Pool.deposit(TokenA.address, 5, { signer: sender }))
+        .to.emit(Pool, 'Deposit')
+        .withArgs(TokenA.address, 5);
+    });
 
-    expect((await TokenA.allowance(sender.address, Pool.address)).output).to.eq(
-      5
-    );
-    await expect(Pool.deposit(TokenA.address, 5, { signer: sender }))
-      .to.emit(Pool, 'Deposit')
-      .withArgs(TokenA.address, 5);
-
-    let tokenAmountOfContract = (await TokenA.balanceOf(Pool.address)).output;
-    expect(tokenAmountOfContract.toNumber()).to.eq(5);
-    let tokenAmountOfSender = (await TokenA.balanceOf(sender.address)).output;
-    expect(tokenAmountOfSender.toNumber()).to.eq(495);
+    it('Can not transfer above amount', async () => {
+      const { sender, TokenA, Pool } = await setup();
+      await expect(
+        Pool.deposit(TokenA.address, 5, { signer: sender })
+      ).to.not.emit(Pool, 'Deposit');
+    });
   });
 
-  it('Can not deposit TokenB', async () => {
-    const { sender, TokenB, Pool } = await setup();
-
-    await TokenB.approve(Pool.address, 10, { signer: sender });
-    expect((await TokenB.allowance(sender.address, Pool.address)).output).to.eq(
-      10
-    );
-
-    await expect(Pool.deposit(TokenB.address, 10, { signer: sender }))
-      .to.not.emit(Pool, 'Deposit')
-      .withArgs(TokenB.address, 10);
-
-    let tokenAmountOfContract = (await TokenB.balanceOf(Pool.address)).output;
-    expect(tokenAmountOfContract.toNumber()).to.eq(0);
-    let tokenAmountOfSender = (await TokenB.balanceOf(sender.address)).output;
-    expect(tokenAmountOfSender.toNumber()).to.eq(1000);
+  describe('Can not deposite Tokens not whitelisted', () => {
+    it('Can not transfer', async () => {
+      const { sender, TokenB, Pool } = await setup();
+      await TokenB.approve(Pool.address, 10, { signer: sender });
+      await expect(
+        Pool.deposit(TokenB.address, 10, { signer: sender })
+      ).to.not.emit(Pool, 'Deposit');
+    });
   });
 });

@@ -16,6 +16,10 @@
 
 use ink_lang as ink;
 
+pub use self::erc20::Erc20;
+pub use self::erc20::Result;
+pub use self::erc20::Error;
+
 #[ink::contract]
 mod erc20 {
     #[cfg(not(feature = "ink-as-dependency"))]
@@ -57,7 +61,7 @@ mod erc20 {
     }
 
     /// The ERC-20 error types.
-    #[derive(Debug, PartialEq, Eq, scale::Encode)]
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
         /// Returned if not enough balance to fulfill a request is available.
@@ -67,7 +71,7 @@ mod erc20 {
     }
 
     /// The ERC-20 result type.
-    pub type Result<T> = core::result::Result<T, Error>;
+    pub type Result<T> = core::result::Result<T, self::Error>;
 
     impl Erc20 {
         /// Creates a new ERC-20 contract with the specified initial supply.
