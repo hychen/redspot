@@ -1,5 +1,5 @@
 {
-  "name": "ink-remote-call",
+  "name": "cross-contract-call",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

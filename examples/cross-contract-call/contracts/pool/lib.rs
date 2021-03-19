@@ -12,8 +12,8 @@ macro_rules! ensure {
 
 #[ink::contract]
 mod pool {
-    use erc20::Result as Errc20Result;
-    use ink_env::{DefaultEnvironment, call::{*, utils::ReturnType}};
+    use erc20::{Erc20, Error as Erc20Error, Result as Errc20Result};
+    use ink_env::call::FromAccountId;
     use ink_prelude::vec::Vec;
     use ink_storage::collections::HashMap as StorageHashMap;
 
@@ -23,7 +23,7 @@ mod pool {
         DuplicateTokenError,
         TokenIsntWhitelistError,
         InsufficientBalanceError,
-        RemoteCallError,
+        TransferError(Erc20Error),
     }
 
     pub type Result<T> = core::result::Result<T, Error>;
@@ -74,14 +74,13 @@ mod pool {
         }
 
         #[ink(message)]
-        pub fn approved_tokens(&self) -> Result<Vec<TokenId>> {
-            Ok(self
-                .token_whitelist
+        pub fn approved_tokens(&self) -> Vec<TokenId> {
+            self.token_whitelist
                 .iter()
                 .filter(|&(_, &v)| v == true)
                 .map(|(k, _)| k)
                 .cloned()
-                .collect::<Vec<TokenId>>())
+                .collect::<Vec<TokenId>>()
         }
 
         #[ink(message)]
@@ -116,8 +115,11 @@ mod pool {
             );
 
             let caller = self.env().caller();
-
-            self._transfer_from_to(token_id, caller, self.env().account_id(), value)?;
+            let mut token: Erc20 = FromAccountId::from_account_id(token_id);
+            let result = token.transfer_from(caller, self.env().account_id(), value);
+            if !result.is_ok() {
+                return Err(Error::TransferError(result.err().unwrap()));
+            };
 
             let caller_balance = self.balance_of(token_id, caller);
             self.token_balances
@@ -130,26 +132,19 @@ mod pool {
 
         #[ink(message)]
         pub fn withdraw(&mut self, token_id: TokenId, value: Balance) -> Result<()> {
-            let from = self.env().caller();
-            let to = self.env().account_id();
-            let from_balance = self.balance_of(token_id, from);
+            let from = self.env().account_id();
+            let to = self.env().caller();
+            let to_balance = self.balance_of(token_id, to);
+            let mut token: Erc20 = FromAccountId::from_account_id(token_id);
 
             ensure!(
                 self.is_whitelisted(token_id),
                 Error::TokenIsntWhitelistError
             );
-            ensure!(from_balance >= value, Error::InsufficientBalanceError);
+            ensure!(to_balance >= value, Error::InsufficientBalanceError);
+            assert!(token.approve(from, value).is_ok());
+            self._transfer_from_to(token_id, from, to, value)?;
 
-            self._transfer_from_to(
-                token_id,
-                self.env().caller(),
-                self.env().account_id(),
-                value,
-            )?;
-
-            self.token_balances
-                .insert((token_id, from), from_balance - value);
-            let to_balance = self.balance_of(token_id, to);
             self.token_balances
                 .insert((token_id, to), to_balance - value);
 
@@ -173,10 +168,10 @@ mod pool {
             to: AccountId,
             value: Balance,
         ) -> Result<()> {
-            let result: Errc20Result<()> = build_call::<DefaultEnvironment>()
+            let result: Errc20Result<()> = ink_env::call::build_call::<ink_env::DefaultEnvironment>()
                 .callee(token_id)
                 .exec_input(
-                    ExecutionInput::new(Selector::new([0xDE, 0xAD, 0xBE, 0xEF]))
+                    ink_env::call::ExecutionInput::new(ink_env::call::Selector::new([0xDE, 0xAD, 0xBE, 0xEF]))
                         // from
                         .push_arg(from)
                         // to
@@ -184,12 +179,12 @@ mod pool {
                         // value
                         .push_arg(value),
                 )
-                .returns::<ReturnType<Errc20Result<()>>>()
+                .returns::<ink_env::call::utils::ReturnType<Errc20Result<()>>>()
                 .fire()
                 .unwrap();
 
             if result.is_err() {
-                Err(Error::RemoteCallError)
+                Err(Error::TransferError(result.err().unwrap()))
             } else {
                 Ok(())
             }

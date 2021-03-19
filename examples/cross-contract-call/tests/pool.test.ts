@@ -48,9 +48,10 @@ describe('Pool', () => {
   describe('Can deposit Tokens whitelisted', () => {
     it('Can deposit TokenA if sender approve', async () => {
       const { sender, TokenA, Pool } = await setup();
+      // sender deposit 5 tokenA.
       await TokenA.approve(Pool.address, 5, { signer: sender });
       await Pool.deposit(TokenA.address, 5, { signer: sender });
-      console.log(await Pool.getAddressOf(sender));
+
       //@FIXE: This does work correctly.
       //       .to.changeTokenBalances(TokenA, [sender, Pool], [-5, 5]);
       let tokenAmountOfContract = (await TokenA.balanceOf(Pool.address)).output;
@@ -82,6 +83,28 @@ describe('Pool', () => {
       await expect(
         Pool.deposit(TokenB.address, 10, { signer: sender })
       ).to.not.emit(Pool, 'Deposit');
+    });
+  });
+
+  describe('Withdraw Token A', () => {
+    it('happy case', async () => {
+      const { sender, TokenA, Pool } = await setup();
+      // Given: Sender deposits 5 TokenA.
+      await TokenA.approve(Pool.address, 5, { signer: sender });
+      await expect(Pool.deposit(TokenA.address, 5, { signer: sender }))
+        .to.emit(Pool, 'Deposit')
+        .withArgs(TokenA.address, 5);
+
+      // When: Sender withdraw 5 TokenA.
+      await expect(Pool.withdraw(TokenA.address, 5, { signer: sender }))
+        .to.emit(Pool, 'Withdraw')
+        .withArgs(TokenA.address, 5);
+
+      // Expect: Pool has 0 tokenA, sender has 500 tokenA.
+      let tokenAmountOfContract = (await TokenA.balanceOf(Pool.address)).output;
+      expect(tokenAmountOfContract.toNumber()).to.eq(0);
+      let tokenAmountOfSender = (await TokenA.balanceOf(sender.address)).output;
+      expect(tokenAmountOfSender.toNumber()).to.eq(500);
     });
   });
 });
